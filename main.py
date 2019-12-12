@@ -2,8 +2,12 @@
 import nltk
 from nltk.corpus import stopwords
 import pymorphy2
+import string
 
 morph = pymorphy2.MorphAnalyzer()
+twit_lengths = list()
+twit_len_stat = dict()
+word_frequencies = dict()
 
 
 # чистка твита, освобождение от лишних слов, знаков, чисел
@@ -17,9 +21,16 @@ def clean(twit):
     redundant = (',', '.', '#', '...', '!', '?', ':', '…', '(', ')', '``',
                  '«', '»', '@', "''", '-', '+')
     stop_words = set(stopwords.words("Russian")).union(redundant)
+    # исключаем личшние слова и знаки
+    filtered_words = [word for word in words if word not in stop_words and word not in string.printable]
 
-    # не берем во внимание дату[0] и время [1]
-    filtered_words = [word for word in words[2:] if word not in stop_words]
+    # удаление ссылок (ссылка - всегда последний элемент в твите)
+
+    for letter in filtered_words[-1]:
+        if letter in string.printable:
+            del filtered_words[-1]
+            break
+
     # print(len(words) - len(filtered_words))
 
     # лемматизация
@@ -28,26 +39,50 @@ def clean(twit):
 
 
 def twit_length(twits):
-    twit_lengths = list()
     for twit in twits:
         twit_lengths.append(len(twit))
-    twit_lengths.sort()
+    for l in sorted(twit_lengths):
+        if l in twit_len_stat:
+            twit_len_stat[l] += 1
+        else:
+            twit_len_stat[l] = 1
+    output_file = open('twits_length.txt', 'w', encoding='utf8')
+    output_file.writelines("Twit length: frequency\n")
+    for key, value in twit_len_stat.items():
+        output_file.writelines(str(key) + ": " + str(value) + "\n")
+
+
+def word_frequency(twits):
+    for twit in twits:
+        for word in twit:
+            if word in word_frequencies:
+                word_frequencies[word] += 1
+            else:
+                word_frequencies[word] = 1
+    output_file = open('frequency.txt', 'w', encoding='utf8')
+    output_file.writelines('Word: frequency\n')
+    for key, value in word_frequencies.items():
+        output_file.writelines(str(key) + ": " + str(value) + "\n")
 
 
 def main():
     # чтение из файла
-    source_file = open('test.txt', 'r', encoding='utf8')
+    source_file = open('data.txt', 'r', encoding='utf8')
     output_file = open('out.txt', 'w', encoding='utf8')
 
     src = source_file.readlines()
     # убираем пустые строки
     src = [line for line in src if line != '\n']
     # чистим каждый твит
-    lines = [clean(line) for line in src]
-    twit_length(lines)
-
-    for word in lines:
-        output_file.writelines(word)
+    # lines - массив массивов слов
+    twits = [clean(line) for line in src]
+    twit_length(twits)
+    word_frequency(twits)
+    for line in twits:
+        for word in line:
+            output_file.writelines(word)
+            output_file.writelines(" ")
+        output_file.writelines("\n")
 
     source_file.close()
     output_file.close()
