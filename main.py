@@ -3,6 +3,7 @@ import nltk
 from nltk.corpus import stopwords
 import pymorphy2
 import string
+import re
 
 morph = pymorphy2.MorphAnalyzer()
 twit_lengths = list()
@@ -22,7 +23,11 @@ def clean(twit):
                  '«', '»', '@', "''", '-', '+')
     stop_words = set(stopwords.words("Russian")).union(redundant)
     # исключаем личшние слова и знаки
-    filtered_words = [word for word in words if word not in stop_words and word not in string.printable]
+    r = re.compile("[а-яА-Я]+")
+    filtered_words = []
+    for word in words:
+        if word not in stop_words and word not in string.printable and word in filter(r.match, words):
+            filtered_words.append(word)
 
     # удаление ссылок (ссылка - всегда последний элемент в твите)
 
@@ -39,6 +44,7 @@ def clean(twit):
 
 
 def twit_length(twits):
+    length = len(twits)
     for twit in twits:
         twit_lengths.append(len(twit))
     for l in sorted(twit_lengths):
@@ -47,22 +53,28 @@ def twit_length(twits):
         else:
             twit_len_stat[l] = 1
     output_file = open('twits_length.txt', 'w', encoding='utf8')
-    output_file.writelines("Twit length: frequency\n")
+    output_file.writelines("Twit length: frequency - %\n")
     for key, value in twit_len_stat.items():
-        output_file.writelines(str(key) + ": " + str(value) + "\n")
+        output_file.writelines(str(key) + ": " + str(value) + " - " + str(round(value / length * 100, 2)) + "%\n")
+    output_file.close()
 
 
 def word_frequency(twits):
+    # how frequent is every word in all twits
+    length = len(twits)
     for twit in twits:
-        for word in twit:
+        # make set from twit to delete repeated words
+        for word in set(twit):
             if word in word_frequencies:
                 word_frequencies[word] += 1
             else:
                 word_frequencies[word] = 1
+
     output_file = open('frequency.txt', 'w', encoding='utf8')
     output_file.writelines('Word: frequency\n')
-    for key, value in word_frequencies.items():
-        output_file.writelines(str(key) + ": " + str(value) + "\n")
+    for key, value in reversed(sorted(word_frequencies.items(), key=lambda x: x[1])):
+        output_file.writelines(str(key) + ": " + str(value) + " - " + str(round(value / length * 100, 2)) + "%\n")
+    output_file.close()
 
 
 def main():
