@@ -6,8 +6,8 @@ import string
 import re
 
 morph = pymorphy2.MorphAnalyzer()
-raw_twits = list()
-twits = list()            # лист твитов
+raw_twits = list()          # лист необработанных твитов
+twits = list()              # лист твитов
 twit_lengths = list()
 twit_len_stat = dict()      # словарь типа (длина твита - частота - %)
 word_frequencies = dict()   # словарь типа (слово - твиты с этим словом - %)
@@ -85,31 +85,67 @@ def set_sentiment():
             n = int(input())
             word_sentiment[key] = n
         else:
-            word_sentiment[key] = 0
+            n = 0
+            word_sentiment[key] = n
         output_file.writelines(str(key) + " " + str(n) + '\n')
     output_file.close()
 
 
-def classification1():
+def classification():
     file = open('estimations.txt')
     src = file.readlines()
     line = dict()
+    file.close()
+    # проходимся по оценкам и разбираем обратно в словарь для дальнейшего использования
     for raw_line in src:
-        # проходимся по оценкам и разбираем обратно в словарь для дальнейшего использования
         line[raw_line.split(' ')[0]] = raw_line.split(' ')[1]
     i = 0
+
+    # --------- FIRST --------------
+    # находим оценку настроения твита, складывая оценки слов, из которых состоит твит
     for twit in twits:
         for word in twit:
             i += int(line[word])
         twit_sentiment1.append(i)
         i = 0
+    # задать пороги, для определения good/bad/neutral твитов
+    up = 1
+    bot = -1
+    # распределяем, согласно заданным порогам
+    for_classification1 = {'good': 0, 'neutral': 0, 'bad': 0}
+    for num in twit_sentiment1:
+        if num >= up:
+            for_classification1['good'] += 1
+        if bot < num < up:
+            for_classification1['neutral'] += 1
+        if num <= bot:
+            for_classification1['bad'] += 1
 
+    # не было в задании, но вывел для наглядности
     output_file = open('classification1.txt', 'w')
-    output_file.writelines('Twit = sentiment estimation, according to good/bad/neutral words')
+    output_file.writelines('Twit = sentiment estimation, according to good/bad/neutral words\n\n')
     i = 0
     for raw_twit in raw_twits:
         output_file.writelines(str(raw_twit) + ' : ' + str(twit_sentiment1[i]) + '\n')
         i += 1
+    output_file.close()
+
+
+
+    # добавляем полученные результаты классификации в файл
+    output_file = open('classifications.txt', 'a')
+    length = len(raw_twits)
+    output_file.writelines('Sum of estimations\n')
+
+    value = for_classification1['good']
+    output_file.write("Good - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
+
+    value = for_classification1['neutral']
+    output_file.write("Neutral - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
+
+    value = for_classification1['bad']
+    output_file.write("Bad - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n\n')
+
     output_file.close()
 
 
@@ -135,8 +171,11 @@ def main():
             output_file.writelines(word)
             output_file.writelines(" ")
         output_file.writelines("\n")
-    set_sentiment()
-    classification1()
+    # функция set_sntiment() вызывается только 1 раз для создания словаря с оценками
+    # для каждого слова!!
+
+    # set_sentiment()
+    classification()
     source_file.close()
     output_file.close()
 

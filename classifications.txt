@@ -1,0 +1,5 @@
+Sum of estimations
+Good - 9 - 50.0%
+Neutral - 7 - 38.89%
+Bad - 2 - 11.11%
+
