@@ -13,6 +13,7 @@ twit_len_stat = dict()      # словарь типа (длина твита - �
 word_frequencies = dict()   # словарь типа (слово - твиты с этим словом - %)
 word_sentiment = dict()     # словарь типа (слово - оценка)
 twit_sentiment1 = list()    # словарь типа (твит - оценка) classification 1
+twit_sentiment2 = list()
 
 
 # чистка твита, освобождение от лишних слов, знаков, чисел
@@ -94,32 +95,33 @@ def set_sentiment():
 def classification():
     file = open('estimations.txt')
     src = file.readlines()
-    line = dict()
+    estimations = dict()
+
     file.close()
     # проходимся по оценкам и разбираем обратно в словарь для дальнейшего использования
     for raw_line in src:
-        line[raw_line.split(' ')[0]] = raw_line.split(' ')[1]
+        estimations[raw_line.split(' ')[0]] = raw_line.split(' ')[1].replace('\n', '')
     i = 0
 
     # --------- FIRST --------------
     # находим оценку настроения твита, складывая оценки слов, из которых состоит твит
     for twit in twits:
         for word in twit:
-            i += int(line[word])
+            i += int(estimations[word])
         twit_sentiment1.append(i)
         i = 0
     # задать пороги, для определения good/bad/neutral твитов
     up = 1
     bot = -1
     # распределяем, согласно заданным порогам
-    for_classification1 = {'good': 0, 'neutral': 0, 'bad': 0}
+    for_classification = {'good': 0, 'neutral': 0, 'bad': 0}
     for num in twit_sentiment1:
         if num >= up:
-            for_classification1['good'] += 1
+            for_classification['good'] += 1
         if bot < num < up:
-            for_classification1['neutral'] += 1
+            for_classification['neutral'] += 1
         if num <= bot:
-            for_classification1['bad'] += 1
+            for_classification['bad'] += 1
 
     # не было в задании, но вывел для наглядности
     output_file = open('classification1.txt', 'w')
@@ -130,20 +132,62 @@ def classification():
         i += 1
     output_file.close()
 
+    # добавляем полученные результаты классификации в файл
+    output_file = open('classifications.txt', 'a')
+    length = len(raw_twits)
+    output_file.writelines('1) Sum of estimations\n')
 
+    value = for_classification['good']
+    output_file.write("Good - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
+
+    value = for_classification['neutral']
+    output_file.write("Neutral - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
+
+    value = for_classification['bad']
+    output_file.write("Bad - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n\n')
+
+    output_file.close()
+
+    # --------- SECOND --------------
+    good = 0
+    neutral = 0
+    bad = 0
+    for twit in twits:
+        for word in twit:
+            if estimations[word] == '1':
+                good += 1
+            if estimations[word] == '0':
+                neutral += 1
+            if estimations[word] == '-1':
+                bad += 1
+        result = max(good, bad, neutral)
+        if result == good:
+            twit_sentiment2.append('good')
+        elif result == neutral:
+            twit_sentiment2.append('neutral')
+        elif result == bad:
+            twit_sentiment2.append('bad')
+        good = 0
+        bad = 0
+        neutral = 0
+
+    # now put results in dict
+    for_classification = {'good': 0, 'neutral': 0, 'bad': 0}
+    for word in twit_sentiment2:
+        for_classification[word] += 1
 
     # добавляем полученные результаты классификации в файл
     output_file = open('classifications.txt', 'a')
     length = len(raw_twits)
-    output_file.writelines('Sum of estimations\n')
+    output_file.writelines('2) Second classification\n')
 
-    value = for_classification1['good']
+    value = for_classification['good']
     output_file.write("Good - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
 
-    value = for_classification1['neutral']
+    value = for_classification['neutral']
     output_file.write("Neutral - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
 
-    value = for_classification1['bad']
+    value = for_classification['bad']
     output_file.write("Bad - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n\n')
 
     output_file.close()
@@ -171,7 +215,7 @@ def main():
             output_file.writelines(word)
             output_file.writelines(" ")
         output_file.writelines("\n")
-    # функция set_sntiment() вызывается только 1 раз для создания словаря с оценками
+    # функция set_sentiment() вызывается только 1 раз для создания словаря с оценками
     # для каждого слова!!
 
     # set_sentiment()

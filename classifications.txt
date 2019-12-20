@@ -1,5 +1,10 @@
-Sum of estimations
-Good - 9 - 50.0%
-Neutral - 7 - 38.89%
-Bad - 2 - 11.11%
+1) Sum of estimations
+Good - 10 - 52.63%
+Neutral - 7 - 36.84%
+Bad - 2 - 10.53%
+
+2) Second classification
+Good - 1 - 5.26%
+Neutral - 18 - 94.74%
+Bad - 0 - 0.0%
 
