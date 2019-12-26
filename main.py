@@ -4,19 +4,26 @@ from nltk.corpus import stopwords
 import pymorphy2
 import string
 import re
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 morph = pymorphy2.MorphAnalyzer()
 raw_twits = list()          # лист необработанных твитов
 twits = list()              # лист твитов
 twit_lengths = list()
-twit_len_stat = dict()      # словарь типа (длина твита - частота - %)
-word_frequencies = dict()   # словарь типа (слово - твиты с этим словом - %)
+twit_len_stat = dict()      # словарь типа (длина твита - частота)
+word_frequencies = dict()   # словарь типа (слово - твиты с этим словом)
 word_sentiment = dict()     # словарь типа (слово - оценка)
 twit_sentiment1 = list()    # словарь типа (твит - оценка) classification 1
 twit_sentiment2 = list()
+estimations = dict()
+pos_adjectives = dict()
+neg_adjectives = dict()
 
 
-# чистка твита, освобождение от лишних слов, знаков, чисел
+# чистка твита (одного), освобождение от лишних слов, знаков, чисел
+# но оставляю дату и время
 # лемматизация
 def clean(twit):
     # дробление текста на слова с помощью токенайзера по словам из nltk
@@ -31,6 +38,7 @@ def clean(twit):
     filtered_words = list()
 
     # дату и время нужно оставить поэтому [2:]
+    # дату и время добавляем отдельно
     filtered_words.append(words[0])
     filtered_words.append(words[1])
     for word in words[2:]:
@@ -72,6 +80,7 @@ def word_frequency():
 
     output_file = open('frequency.txt', 'w', encoding='utf8')
     output_file.writelines('Word: frequency\n')
+    # слова отсортированны по частоте появления
     for key, value in reversed(sorted(word_frequencies.items(), key=lambda x: x[1])):
         output_file.writelines(str(key) + " - " + str(value) + " - " + str(round(value / length * 100, 2)) + "%\n")
     output_file.close()
@@ -79,15 +88,10 @@ def word_frequency():
 
 def set_sentiment():
     output_file = open('estimations.txt', 'w')
-    n = 0
     for key, value in word_frequencies.items():
-        if value >= 2:
-            print(key + ": ")
-            n = int(input())
-            word_sentiment[key] = n
-        else:
-            n = 0
-            word_sentiment[key] = n
+        print(key + ": ")
+        n = int(input())
+        word_sentiment[key] = n
         output_file.writelines(str(key) + " " + str(n) + '\n')
     output_file.close()
 
@@ -95,8 +99,6 @@ def set_sentiment():
 def classification():
     file = open('estimations.txt')
     src = file.readlines()
-    estimations = dict()
-
     file.close()
     # проходимся по оценкам и разбираем обратно в словарь для дальнейшего использования
     for raw_line in src:
@@ -133,20 +135,30 @@ def classification():
     output_file.close()
 
     # добавляем полученные результаты классификации в файл
-    output_file = open('classifications.txt', 'a')
+    output_file = open('classifications.txt', 'w')
     length = len(raw_twits)
     output_file.writelines('1) Sum of estimations\n')
 
-    value = for_classification['good']
-    output_file.write("Good - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
+    good_value = for_classification['good']
+    neutral_value = for_classification['neutral']
+    bad_value = for_classification['bad']
 
-    value = for_classification['neutral']
-    output_file.write("Neutral - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
+    output_file.write("Good - " + str(good_value) + " - " + str(round(good_value / length * 100, 2)) + '%\n')
+    output_file.write("Neutral - " + str(neutral_value) + " - " + str(round(neutral_value / length * 100, 2)) + '%\n')
+    output_file.write("Bad - " + str(bad_value) + " - " + str(round(bad_value / length * 100, 2)) + '%\n\n')
 
-    value = for_classification['bad']
-    output_file.write("Bad - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n\n')
-
-    output_file.close()
+    # barplot
+    good = 'good - {}%'.format(round(good_value / length * 100, 2))
+    neutral = 'neutral - {}%'.format(round(neutral_value / length * 100, 2))
+    bad = 'bad - {}%'.format(round(bad_value / length * 100, 2))
+    names = good, neutral, bad
+    size_of_groups = [for_classification['good'], for_classification['neutral'], for_classification['bad']]
+    plt.pie(size_of_groups, labels=names, colors=['red', 'green', 'blue'])
+    # add a circle at the center
+    my_circle = plt.Circle((0, 0), 0.7, color='white')
+    p = plt.gcf()
+    p.gca().add_artist(my_circle)
+    plt.show()
 
     # --------- SECOND --------------
     good = 0
@@ -181,15 +193,64 @@ def classification():
     length = len(raw_twits)
     output_file.writelines('2) Second classification\n')
 
-    value = for_classification['good']
-    output_file.write("Good - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
+    good_value = for_classification['good']
+    neutral_value = for_classification['neutral']
+    bad_value = for_classification['bad']
 
-    value = for_classification['neutral']
-    output_file.write("Neutral - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n')
+    output_file.write("Good - " + str(good_value) + " - " + str(round(good_value / length * 100, 2)) + '%\n')
+    output_file.write("Neutral - " + str(neutral_value) + " - " + str(round(neutral_value / length * 100, 2)) + '%\n')
+    output_file.write("Bad - " + str(bad_value) + " - " + str(round(bad_value / length * 100, 2)) + '%\n\n')
 
-    value = for_classification['bad']
-    output_file.write("Bad - " + str(value) + " - " + str(round(value / length * 100, 2)) + '%\n\n')
+    output_file.close()
 
+    # barplot
+    good = 'good - {}%'.format(round(good_value / length * 100, 2))
+    neutral = 'neutral - {}%'.format(round(neutral_value / length * 100, 2))
+    bad = 'bad - {}%'.format(round(bad_value / length * 100, 2))
+    names = good, neutral, bad
+    size_of_groups = [for_classification['good'], for_classification['neutral'], for_classification['bad']]
+    plt.pie(size_of_groups, labels=names, colors=['red', 'green', 'blue'])
+    # add a circle at the center
+    my_circle = plt.Circle((0, 0), 0.7, color='white')
+    p = plt.gcf()
+    p.gca().add_artist(my_circle)
+    plt.show()
+
+
+def cout_adjectives():
+    length = len(twits)
+    for twit in twits:
+        for word in set(twit):
+            if morph.parse(word)[0].tag.POS == 'ADJF':
+                if estimations[word] == '1':
+                    if word in pos_adjectives:
+                        pos_adjectives[word] += 1
+                    else:
+                        pos_adjectives[word] = 1
+                if estimations[word] == '-1':
+                    if word in neg_adjectives:
+                        neg_adjectives[word] += 1
+                    else:
+                        neg_adjectives[word] = 1
+    output_file = open('adjectives.txt', 'w')
+    # отбираем первые 5
+    pos_adjectives_sorted = reversed(sorted(pos_adjectives.items(), key=lambda x: x[1]))
+    neg_adjectives_sorted = reversed(sorted(neg_adjectives.items(), key=lambda x: x[1]))
+    i = 0
+    for key, value in pos_adjectives_sorted:
+        if i != 5:
+            output_file.writelines(str(key) + " - " + str(value) + ' - ' + str(round(value / length * 100, 2)) + '%\n')
+            i += 1
+        else:
+            break
+    output_file.writelines('\n')
+    i = 0
+    for key, value in neg_adjectives_sorted:
+        if i != 5:
+            output_file.writelines(str(key) + " - " + str(value) + ' - ' + str(round(value / length * 100, 2)) + '%\n')
+            i += 1
+        else:
+            break
     output_file.close()
 
 
@@ -206,10 +267,11 @@ def main():
     # чистим каждый твит
     # lines - массив массивов слов
     for line in src:
-        twits.append(clean(line))
+        twits.append(clean(line))   # вызываем клинер
 
     twit_length()
     word_frequency()
+
     for twit in twits:
         for word in twit:
             output_file.writelines(word)
@@ -220,6 +282,7 @@ def main():
 
     # set_sentiment()
     classification()
+    cout_adjectives()
     source_file.close()
     output_file.close()
 
