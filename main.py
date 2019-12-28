@@ -315,7 +315,7 @@ def dates_counter():
                     good += 1
                 elif new_twit_sent1[i] == 0:
                     neutral += 1
-                elif new_twit_sent1[i] < 1:
+                elif new_twit_sent1[i] < 0:
                     bad += 1
                 counter += 1
             i += 1
